@@ -11,7 +11,7 @@ def debug(*msg: str):
     if debug_mode:
         print(*msg)
 
-random_word_list: list[str] = []
+random_word_list: list = []
 with open('random_word_list.txt') as listfile:
     if type(listfile) == str:
         random_word_list = listfile.split('\n')
