@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 import random
 
-debug_mode: bool = True
+debug_mode: bool = False
 
 def debug(*msg: str):
     if debug_mode:
@@ -129,6 +129,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
 
 async def msg_command(message: discord.Message):
     if not (message.channel.permissions_for(message.guild.me).send_messages):
+        print(f"Lacking send message permission in guild {message.guild.id}")
         return
     
     msg_text = message.content.removeprefix('$').split(' ')
