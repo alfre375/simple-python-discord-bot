@@ -458,13 +458,19 @@ def checkPermission(permission: str, user: discord.Member, channel: discord.chan
         return True
     guild_id = str(channel.guild.id)
     if guild_id in data:
+        debug('Guild registered')
         if 'role_permissions' in data[guild_id]:
+            debug('Guild has role permissions')
             for role in user.roles:
                 role_id = str(role.id)
+                debug(f'Trying role {role.name} ({role_id})')
                 if role_id in data[guild_id]['role_permissions']:
-                    if permission in data[guild_id]['role_permissions']:
+                    debug('Permissions registered for this role')
+                    if permission in data[guild_id]['role_permissions'][role_id]:
+                        debug('This role has the specified permission')
                         return True
-                    if 'universal' in data[guild_id]['role_permissions']:
+                    if 'universal' in data[guild_id]['role_permissions'][role_id]:
+                        debug('This role has the universal permission')
                         return True
     return False
 
