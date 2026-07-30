@@ -140,8 +140,8 @@ async def msg_command(message: discord.Message):
     elif mt0 == 'hug':
         await message.add_reaction('🫂')
     elif mt0 == 'add_reply_command':
-        if not message.author.guild_permissions.manage_guild:
-            await message.reply('You need permission to manage guild in order to use this command!')
+        if not checkPermission('add_reply_command', message.author, message.channel):
+            await message.reply('You need permission to manage guild or an allowed role in order to use this command!')
             return
         message_id_to_apply = msg_text[1]
         debug(f'applying to {message_id_to_apply}')
@@ -289,6 +289,7 @@ async def msg_command(message: discord.Message):
             return
         if len(msg_text) < 3:
             await message.reply('You must specify an action')
+            return
         
         trigger_id = msg_text[1]
         action = msg_text[2]
@@ -314,6 +315,24 @@ async def msg_command(message: discord.Message):
             debug(data)
             file.write(json.dumps(data[str(message.channel.guild.id)]))
             file.close()
+    elif mt0 == 'list_channel_onmsg_triggers':
+        if not message.author.guild_permissions.manage_guild:
+            await message.reply('You need permission to manage guild in order to use this command!')
+            return
+            
+        applicable_channel = int(msg_text[1], base=0) if len(msg_text) > 1 else message.channel.id
+        
+        if not (
+            (str(msg_channel.guild.id) in data.keys()) and
+            (str(applicable_channel) in data[str(msg_channel.guild.id)].keys()) and
+            ('onmsg-trigger' in data[str(msg_channel.guild.id)][str(applicable_channel)].keys()) and
+            ('actions' in data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger'].keys()) and
+            (len(data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger']['actions'].keys()) > 0)
+            ):
+            await message.reply('There are no onmsg_triggers in this channel')
+            return
+        
+        await message.reply('The list of onmsg_triggers in this channel is as follows:\n- ' + '\n- '.join(list(data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger']['actions'].keys())))
     elif mt0 == 'add_onmsg_trigger_channel_role_exception':
         if not message.author.guild_permissions.manage_roles:
             await message.reply('You need permission to manage roles in order to use this command!')
@@ -333,7 +352,7 @@ async def msg_command(message: discord.Message):
         
         if not str(msg_channel.guild.id) in data.keys():
             data[str(msg_channel.guild.id)] = {
-                str(msg_channel.id): {
+                str(applicable_channel): {
                     'onmsg-trigger': {
                         'exclude_roles': [
                             int(msg_text[1])
@@ -341,26 +360,26 @@ async def msg_command(message: discord.Message):
                     }
                 }
             }
-        elif not str(msg_channel.id) in data[str(msg_channel.guild.id)].keys():
-            data[str(msg_channel.guild.id)][str(msg_channel.id)] = {
+        elif not str(applicable_channel) in data[str(msg_channel.guild.id)].keys():
+            data[str(msg_channel.guild.id)][str(applicable_channel)] = {
                 'onmsg-trigger': {
                     'exclude_roles': [
                         int(msg_text[1])
                     ]
                 }
             }
-        elif not 'onmsg-trigger' in data[str(msg_channel.guild.id)][str(msg_channel.id)].keys():
-            data[str(msg_channel.guild.id)][str(msg_channel.id)]['onmsg-trigger'] = {
+        elif not 'onmsg-trigger' in data[str(msg_channel.guild.id)][str(applicable_channel)].keys():
+            data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger'] = {
                 'exclude_roles': [
                     int(msg_text[1])
                 ]
             }
-        elif not 'exclude_roles' in data[str(msg_channel.guild.id)][str(msg_channel.id)]['onmsg-trigger'].keys():
-            data[str(msg_channel.guild.id)][str(msg_channel.id)]['onmsg-trigger']['exclude_roles'] = [
+        elif not 'exclude_roles' in data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger'].keys():
+            data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger']['exclude_roles'] = [
                 int(msg_text[1])
             ]
-        elif not msg_text[1] in data[str(msg_channel.guild.id)][str(msg_channel.id)]['onmsg-trigger']['exclude_roles'].keys():
-            data[str(msg_channel.guild.id)][str(msg_channel.id)]['onmsg-trigger']['exclude_roles'].push(int(msg_text[1]))
+        elif not msg_text[1] in data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger']['exclude_roles'].keys():
+            data[str(msg_channel.guild.id)][str(applicable_channel)]['onmsg-trigger']['exclude_roles'].push(int(msg_text[1]))
         else:
             await message.reply('Role has already been added to this channel\'s global onmsg-trigger role exclusions')
             return
@@ -434,6 +453,20 @@ async def reaction_cmd(cmd: list[str], user: discord.User | discord.Member, mess
     else:
         await channel.send(f'ERR: Invalid command {cmd[0]}')
         
+def checkPermission(permission: str, user: discord.Member, channel: discord.channel.TextChannel):
+    if user.guild_permissions.manage_guild:
+        return True
+    guild_id = str(channel.guild.id)
+    if guild_id in data:
+        if 'role_permissions' in data[guild_id]:
+            for role in user.roles:
+                role_id = str(role.id)
+                if role_id in data[guild_id]['role_permissions']:
+                    if permission in data[guild_id]['role_permissions']:
+                        return True
+                    if 'universal' in data[guild_id]['role_permissions']:
+                        return True
+    return False
 
 def random_name() -> str:
     return random_word_list[random.randrange(0,len(random_word_list)-1)] + random_word_list[random.randrange(0,len(random_word_list)-1)] + str(random.randrange(0,999))
