@@ -384,6 +384,14 @@ async def msg_command(message: discord.Message):
             await message.reply('Role has already been added to this channel\'s global onmsg-trigger role exclusions')
             return
         await message.reply(f'Added role {role.name} (ID: {role.id}) to this channel\'s global onmsg-trigger role exclusions')
+    elif mt0 == 'say_as_bot':
+        if not checkPermission('say_as_bot', message.author, message.channel):
+            await message.reply('You do not have permissions to say this as the bot')
+            return
+        shall_send_val = ' '.join(msg_text[1:])
+        await message.channel.send(shall_send_val)
+        await message.delete()
+        #log(message.guild, f'User <@{message.author.id}> made the bot say {shall_send_val}')
     else:
         await message.reply(f'Invalid command: {msg_text[0]}')
 
