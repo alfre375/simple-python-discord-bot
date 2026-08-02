@@ -392,6 +392,25 @@ async def msg_command(message: discord.Message):
         await message.channel.send(shall_send_val)
         await message.delete()
         #log(message.guild, f'User <@{message.author.id}> made the bot say {shall_send_val}')
+    elif mt0 == 'delete_message':
+        if not checkPermission('delete_any_message', message.author, message.channel):
+            await message.reply('You do not have permission to delete any message with this bot')
+            return
+        if len(msg_text) == 2:
+            msg_to_del = await message.channel.fetch_message(int(msg_text[1]))
+            await msg_to_del.delete()
+            msg_reply = await message.reply('Message deleted')
+            await msg_reply.delete(delay=2)
+            await message.delete(delay=2)
+        elif len(msg_text) > 2:
+            channel_to_check = await message.guild.fetch_channel(int(msg_text[2]))
+            msg_to_del = await channel_to_check.fetch_message(int(msg_text[1]))
+            await msg_to_del.delete()
+            msg_reply = await message.reply('Message deleted')
+            await msg_reply.delete(delay=2)
+            await message.delete(delay=2)
+        elif len(msg_text) < 2:
+            await message.reply('No message specified')
     else:
         await message.reply(f'Invalid command: {msg_text[0]}')
 
